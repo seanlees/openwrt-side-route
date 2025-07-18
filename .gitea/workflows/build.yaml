@@ -1,0 +1,83 @@
+name: Build OpenWrt Package
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    name: Build IPK Package
+    runs-on: ubuntu-22.04
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Setup Build Environment
+      run: |
+        # 安装必要依赖
+        sudo apt-get update
+        sudo apt-get install -y build-essential libtool autoconf automake pkg-config
+        
+        # 安装 OpenWrt SDK（根据你的目标平台调整）
+        wget https://downloads.openwrt.org/releases/21.02.1/targets/x86/64/openwrt-sdk-21.02.1-x86-64_gcc-8.4.0_musl.Linux-x86_64.tar.xz
+        tar -xvf openwrt-sdk-*.tar.xz
+        cd openwrt-sdk-*
+
+    - name: Configure Build
+      run: |
+        # 复制配置文件
+        cp -r ../etc init.d/
+        cp -r ../usr sbin/
+        
+        # 创建 Makefile（如果不存在）
+        cat > Makefile << EOF
+        all:
+        	@echo "Build complete - IPK will be created in next step"
+        
+        package:
+        	mkdir -p ipk-root
+        	cp -r etc init.d ipk-root/
+        	cp -r usr sbin ipk-root/
+        	# 创建控制文件
+        	mkdir -p ipk-root/DEBIAN
+        	cat > ipk-root/DEBIAN/control << CONTROL
+        Package: side-route
+        Version: 1.0.0
+        Section: network
+        Priority: optional
+        Architecture: all
+        Maintainer: Your Name <your@email.com>
+        Description: Side route management daemon
+        CONTROL
+        	# 打包
+        	dpkg-deb --build ipk-root
+        EOF
+
+    - name: Build Package
+      run: |
+        # 执行构建
+        make package
+
+    - name: Upload Artifact
+      uses: gitea/upload-artifact@main
+      with:
+        name: side-route-package
+        path: ipk-root.deb
+
+    - name: Create Release
+      if: github.event_name == 'release'
+      run: |
+        # 如果是 release 事件，创建发布
+        curl -X POST -H "Authorization: token ${{ secrets.GITEA_TOKEN }}" \
+          -H "Content-Type: application/json" \
+          -d "{\"tag_name\":\"${{ github.ref }}\",\"name\":\"side-route-${{ github.sha }}\"}" \
+          "https://gitea.example.com/api/v1/repos/${{ github.repository }}/releases"
+
+    - name: Upload Release Asset
+      if: github.event_name == 'release'
+      uses: gitea/upload-release-asset@main
+      with:
+        file: ipk-root.deb
+        tag: ${{ github.ref }}
