@@ -1,0 +1,7 @@
+config global
+    option route_table_name
+
+config device 'xiaomi_phone'
+    option name '小米手机'
+    option mac 'AA:BB:CC:DD:EE:FF'
+    option scientific '1'

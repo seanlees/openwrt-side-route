@@ -1,0 +1,171 @@
+#!/usr/bin/env lua
+
+local uci = require "uci"
+local nixio = require "nixio"
+local posix = require "posix"
+
+-- 配置路径
+local CONFIG_FILE = "/etc/config/side-route"
+local TMP_CONFIG = "/tmp/side-route"
+local PID_FILE = "/var/run/side-route.pid"
+
+-- 守护进程化
+nixio.daemonize()
+
+-- 创建PID文件
+local pidfile = io.open(PID_FILE, "w")
+pidfile:write(tostring(posix.getpid("pid")))
+pidfile:close()
+
+-- 信号处理
+local function handle_signal(sig)
+    if sig == nixio.const.SIGHUP then
+        nixio.syslog("info", "接收到SIGHUP信号，重载配置")
+        reload_config()
+    elseif sig == nixio.const.SIGTERM then
+        nixio.syslog("info", "接收到SIGTERM信号，退出守护进程")
+        os.remove(PID_FILE)
+        os.exit(0)
+    end
+end
+
+nixio.signal(nixio.const.SIGHUP, handle_signal)
+nixio.signal(nixio.const.SIGTERM, handle_signal)
+
+-- 配置重载函数
+function reload_config()
+    nixio.syslog("info", "Reloading side-route configuration")
+    sys.exec("Reloading side-route configuration")
+    
+    local old_cursor = uci.cursor(nil, "/tmp")
+    old_cursor:load("side-route",TMP_CONFIG)
+    local cursor = uci.cursor()
+    cursor:load("side-route",CONFIG_FILE)
+
+    local changes = cursor:changes(CONFIG_NAME)
+    if not changes then
+        nixio.syslog("info", "没有检测到变更")
+        return
+    end
+    
+    nixio.syslog("info", "检测到配置变更，正在处理...")
+    
+    -- 处理删除的规则
+    if changes["delete"] then
+        for section, _ in pairs(changes["delete"]) do
+            if section:match("^routing") then
+                remove_rule({[".name"] = section})
+            end
+        end
+    end
+    
+    -- 处理添加的规则
+    if changes["add"] then
+        for section, data in pairs(changes["add"]) do
+            if section:match("^routing") then
+                apply_rule({
+                    [".name"] = section,
+                    rule = data.values.rule
+                })
+            end
+        end
+    end
+
+    local r = old_cursor.get("side-route","global","route_table_name")
+
+    sys.exec(string.format('logger -t LUCI_DEBUG "side-route old_cursor: %s"',r))
+
+    --[[ local route_table_name ,route_side_ip,route_interface,route_mark
+    local devicesIp = []
+    -- 应用路由规则
+    cursor:foreach("side-route", "global", function(section)
+        route_table_name = section.route_table_name
+        route_side_ip = section.route_side_ip
+        route_interface = section.route_interface
+        route_mark = section.route_mark
+    end)
+    cursor:foreach("side-route", "device", function(section)
+        if section.scientific == "1" then
+            devicesIp[section.name] = section.ip
+        end
+    ) ]]
+    
+    cursor:close()
+end
+
+-- 定义执行 ping 的函数
+local function ping(host, count)
+    -- 参数校验
+    if not host or not count then
+        return nil, "参数缺失"
+    end
+
+    -- 构建命令（注意转义特殊字符）
+    local command = string.format("ping -c %d %q 2>&1", tonumber(count), host)
+
+    -- 执行命令并捕获输出
+    local handle = io.popen(command)
+    if not handle then
+        return nil, "无法执行命令"
+    end
+
+    local result = handle:read("*a")
+    handle:close()
+
+    local success = false
+
+    -- 匹配 "X packets transmitted, Y received"
+    if result:find("(%d+) packets transmitted, (%d+) received") then
+        packets_received = tonumber(result:match("(%d+) packets transmitted, (%d+) received"))
+        success = true
+    end
+
+    return success
+end
+
+-- 初始加载配置
+reload_config()
+
+-- 主函数
+local function main()
+    nixio.syslog("info", "守护进程初始化...")
+    
+    -- 初始加载配置
+    reload_config()
+    
+    nixio.syslog("info", "进入主循环，等待信号...")
+    
+    -- 主循环
+    while true do
+        -- 睡眠直到收到信号
+        local events = nixio.poll({
+            { fd = nixio.stderr, events = nixio.poll_flags("ERR") }
+        }, -1)  -- 无限期等待信号
+        
+        -- 处理任何文件描述符事件
+        if events and #events > 0 then
+            for _, event in ipairs(events) do
+                if event.revents & nixio.poll_flags("ERR") ~= 0 then
+                    nixio.syslog("warning", "文件描述符错误事件")
+                end
+            end
+        end
+    end
+end
+
+
+-- 异常处理
+local status, err = xpcall(main, function(err)
+    nixio.syslog("crit", "守护进程崩溃: " .. tostring(err))
+    nixio.syslog("crit", debug.traceback())
+    
+    -- 尝试清理资源
+    os.remove(PID_FILE)
+    os.exit(1)
+end)
+
+-- 正常退出
+os.remove(PID_FILE)
+os.exit(0)
+
+

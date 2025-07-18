@@ -1,0 +1,16 @@
+config global global
+    option route_table_name '100'
+    option route_side_ip '192.168.28.254'
+    option route_interface 'br-lan'
+    option route_mark '10'
+
+config devic
+    option name '小米手机'
+    option mac 'AA:BB:CC:DD:EE:FF'
+    option scientific '1'
+
+
+config device
+    option name 'RE米手机'
+    option mac 'AA:BB:CC:DD:EE:AF'
+    option scientific '1'

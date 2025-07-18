@@ -1,0 +1,45 @@
+<div class="cbi-section" id="device_list_section">
+    <h3 class="cbi-section-title"><%=self.title%></h3>
+
+    <% if self.description then %>
+    <div class="cbi-section-descr"><%=self.description%></div>
+    <% end %>
+
+    <table class="table cbi-section-table">
+        <tr class="tr cbi-section-table-titles ">
+            <th class="th cbi-section-table-cell"><%= translate("Device Name") %></th>
+            <th class="th cbi-section-table-cell"><%= translate("MAC Address") %></th>
+            <th class="th cbi-section-table-cell"><%= translate("Use Scientific Routing") %></th>
+            <th class="th cbi-section-table-cell"><%= translate("Actions") %></th>
+        </tr>
+
+        <% if self.data.devices == nil or #self.data.devices == 0 then %>
+        <tr>
+            <td class="cbi-section-table-cell" colspan="4"><%= translate("No devices found.") %></td>
+        </tr>
+        <% else %>
+            <% for k, v in ipairs(self.data.devices) do %>
+                <tr class="tr cbi-section-table-row">
+                    <td class="td cbi-value-field"><%= v.name or "(Unnamed)" %></td>
+                    <td class="td cbi-value-field"><%= v.mac or "(Unknown)" %></td>
+                    <td class="td cbi-value-field">
+                        <%= v.scientific == "1" and translate("Yes") or translate("No") %>
+                    </td>
+                    <td class="td cbi-value-field">
+                        <input type="button" class="cbi-button cbi-button-edit" value="<%= translate("Edit") %>"
+                            onclick="location.href='<%= self.data.build_url('admin/services/side_route/device/' .. v.sid) %>'" />
+                        <input type="button" class="cbi-button cbi-button-remove" value="<%= translate("Delete") %>"
+                            onclick="if(confirm('<%= translate("Are you sure?") %>')) location.href='<%= self.data.build_url('admin/services/side_route/device-delete/' .. v.sid) %>'" />
+                    </td>
+                </tr>
+            <% end %>
+        <% end %>
+    </table>
+
+
+
+    <div style="margin-top:1em;">
+        <input type="button" class="cbi-button cbi-button-add" value="<%= translate("Add New Device") %>"
+            onclick="location.href='<%= self.data.build_url('admin/services/side_route/device/-') %>'" />
+    </div>
+</div>
