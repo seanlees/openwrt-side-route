@@ -8,22 +8,11 @@ on:
 jobs:
   build:
     name: Build IPK Package
-    runs-on: ubuntu-22.04
+    runs-on: openwrt
     
     steps:
     - name: Checkout code
       uses: actions/checkout@v3
-
-    - name: Setup Build Environment
-      run: |
-        # 安装必要依赖
-        sudo apt-get update
-        sudo apt-get install -y build-essential libtool autoconf automake pkg-config
-        
-        # 安装 OpenWrt SDK（根据你的目标平台调整）
-        wget https://downloads.openwrt.org/releases/21.02.1/targets/x86/64/openwrt-sdk-21.02.1-x86-64_gcc-8.4.0_musl.Linux-x86_64.tar.xz
-        tar -xvf openwrt-sdk-*.tar.xz
-        cd openwrt-sdk-*
 
     - name: Configure Build
       run: |

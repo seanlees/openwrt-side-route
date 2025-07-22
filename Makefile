@@ -37,16 +37,14 @@ define Package/$(PKG_NAME)/install
 	$(INSTALL_DIR) $(1)/usr/sbin
 	$(INSTALL_DIR) $(1)/usr/lib/lua/luci/model/cbi/side_route
 	$(INSTALL_DIR) $(1)/usr/lib/lua/luci/controller/side_route
-	# $(INSTALL_DIR) $(1)/usr/lib/lua/luci/view/side_route
 
 	$(INSTALL_CONF) ./etc/config/side-route $(1)/etc/config/side-route
 	$(INSTALL_BIN) ./etc/init.d/side-route.sh $(1)/etc/init.d/side-route
-	# $(INSTALL_BIN) ./usr/sbin/side-route-daemon.lua	$(1)/usr/sbin/side-route-daemon.lua
 	$(INSTALL_BIN) ./usr/sbin/side-route-daemon.sh	$(1)/usr/sbin/side-route-daemon.sh
+	$(INSTALL_BIN) ./usr/sbin/side-route-firewall.sh	$(1)/usr/sbin/side-route-firewall.sh
 
 	$(CP) ./src/lua/controller/*.lua $(1)/usr/lib/lua/luci/controller/side_route/
 	$(CP) ./src/lua/model/cbi/*.lua $(1)/usr/lib/lua/luci/model/cbi/side_route/
-	$(CP) ./src/lua/view/*.htm $(1)/usr/lib/lua/luci/view/side_route/
 endef
 
 $(eval $(call BuildPackage,$(PKG_NAME)))

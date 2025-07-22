@@ -5,7 +5,6 @@ local TypedSection = cbi.TypedSection
 local NamedSection = cbi.NamedSection
 local Value = cbi.Value
 local Button = cbi.Button
-local DummyValue = cbi.DummyValue
 -- network
 local network = require "luci.model.network"
 local net = network.init()

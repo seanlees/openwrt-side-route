@@ -36,4 +36,11 @@
                              |  (Internet)      |
                              +------------------+
 ```
-                            
+
+- 编译
+#cp  .  /openwrt-sdk/package
+#cd /openwrt-sdk
+make package/openwrt-side-route/compile V=99
+
+- 使用
+1. 依赖luci-compat需要手动安装。 openwrt似乎不自动安装该模块
